@@ -9,7 +9,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Intrinsic Stock Value Evaluator</title>
+  <title>Is Your Stock Over or Undervalued?</title>
   <style>
     /* Overall slick, professional background */
     body {
@@ -50,10 +50,11 @@
       font-size: 16px;
       box-sizing: border-box;
     }
+    /* Buttons now match the dark blue background (#2c3e50) */
     button {
       margin-top: 15px;
       padding: 10px 20px;
-      background-color: #007BFF;
+      background-color: #2c3e50;
       color: #fff;
       border: none;
       cursor: pointer;
@@ -61,7 +62,7 @@
       border-radius: 4px;
     }
     button:hover {
-      background-color: #0056b3;
+      background-color: #24303b;
     }
     .output {
       margin-top: 20px;
@@ -101,8 +102,11 @@
 </head>
 <body>
   <div class="container">
-    <h1>Intrinsic Stock Value Evaluator</h1>
-    <p style="text-align:center;">Calculate the intrinsic value of any stock! <br><small>Assuming the net debt of the company only changes by compounding with the cost of debt.</small></p>
+    <h1>Is your stock over or undervalued?</h1>
+    <p style="text-align:center;">
+      Calculate the intrinsic value of any stock!<br>
+      <small>Assuming the net debt of the company only changes by compounding with the cost of debt.</small>
+    </p>
 
     <h2>Your Company's Financial Entries</h2>
     <div style="text-align:center;">
@@ -120,7 +124,7 @@
         <input type="number" id="shortGrowth" placeholder="Short Growth">
       </div>
       <div class="input-group">
-        <label for="years">Years (Intrinsic & DCF):</label>
+        <label for="years">Years (in the short term):</label>
         <input type="number" id="years" placeholder="Years">
       </div>
       <div class="input-group">
@@ -166,16 +170,39 @@
 
     <div class="output" id="result"></div>
 
-    <h2>Discounted Cash Flow Analysis</h2>
-    <div id="dcfTable"></div>
+    <!-- Toggle Button for Discounted Cash Flows Section -->
+    <div style="text-align:center;">
+      <button id="toggleDCF" onclick="toggleSection('dcfContent')">Discounted Cash Flows</button>
+    </div>
+    <div id="dcfContent" style="display: none;">
+      <div id="dcfTable"></div>
+    </div>
 
-    <h2>Sensitivity Analysis: Top 6 Matching Growth Rate Combinations</h2>
-    <div id="matchTable"></div>
+    <!-- Toggle Button for Sensitivity Analysis Section -->
+    <div style="text-align:center;">
+      <button id="toggleSensitivity" onclick="toggleSection('sensitivityContent')">Short Term and Long Term Growth Rates Variable Analysis</button>
+    </div>
+    <div id="sensitivityContent" style="display: none;">
+      <p style="text-align:center;">
+        This table gives six combinations of different short term and long term growth rates that make the intrinsic share price equal to the real share price of your stock. These six combinations have the lowest margin of error from the real share price.
+      </p>
+      <div id="matchTable"></div>
+    </div>
   </div>
 
   <script>
+    // Toggle display of a section
+    function toggleSection(sectionId) {
+      var section = document.getElementById(sectionId);
+      if (section.style.display === "none" || section.style.display === "") {
+        section.style.display = "block";
+      } else {
+        section.style.display = "none";
+      }
+    }
+
     // Calculate the intrinsic share price using provided inputs.
-    // Adjust net debt by compounding each year using the cost of debt.
+    // Net debt compounds each year using the cost of debt.
     function calculateIntrinsicSharePrice(FCF, g_short, years, g_long, WACC, netDebt, costDebt, outstandingShares) {
       let pv = 0;
       for (let t = 1; t <= years; t++) {
@@ -187,17 +214,17 @@
         return NaN;
       }
       let terminalValue = (FCF_final * (1 + g_long)) / (WACC - g_long) / Math.pow(1 + WACC, years);
-      // Compound net debt each year using the cost of debt.
+      // Compound net debt using cost of debt for the given number of years.
       let compoundedNetDebt = netDebt * Math.pow(1 + costDebt, years);
       let enterpriseValue = pv + terminalValue;
       let equityValue = enterpriseValue - compoundedNetDebt;
       return equityValue / outstandingShares;
     }
 
-    // Generate the Discounted Cash Flow (DCF) table.
-    // The table dynamically creates columns based on the "Years" input,
-    // with one column per year, one column for Terminal Value, and one for the Present Value of Cash Flows.
-    // Display values in billions (rounded to 3 decimals).
+    // Generate the Discounted Cash Flows table.
+    // The table creates columns based on the "Years" input, a column for Terminal Value,
+    // and a final column for the sum of all discounted cash flows (Present Value of Cash Flows).
+    // Values are displayed in billions (rounded to 3 decimals).
     function generateDCFTable() {
       let fcf = parseFloat(document.getElementById('fcf').value) * parseFloat(document.getElementById('fcfUnit').value);
       let shortGrowth = parseFloat(document.getElementById('shortGrowth').value) / 100;
@@ -207,7 +234,6 @@
 
       let totalDCF = 0;
       let tableHTML = "<table><tr>";
-      // Create header columns for each year.
       for (let year = 1; year <= numYears; year++) {
         tableHTML += "<th>Year " + year + "</th>";
       }
@@ -218,7 +244,6 @@
         let futureCF = fcf * Math.pow(1 + shortGrowth, year);
         let discountedCF = futureCF / Math.pow(1 + WACC, year);
         totalDCF += discountedCF;
-        // Convert to billions and round to 3 decimals.
         tableHTML += "<td>$" + (discountedCF / 1e9).toFixed(3) + "B</td>";
       }
       let FCF_final = fcf * Math.pow(1 + shortGrowth, numYears);
@@ -232,8 +257,6 @@
     }
 
     // Generate the Sensitivity Analysis table showing the top 6 matching growth rate combinations.
-    // This loops over both short term and long term growth rates (0.1% increments)
-    // and collects pairs where the intrinsic share price is within ±$0.20 of the real share price.
     function generateSensitivityAnalysis() {
       let minRate = 0;
       let maxLimit = 0.5; // up to 50%
@@ -251,7 +274,6 @@
       let matchPairs = [];
       let absTol = 0.20; // ±$0.20 tolerance
 
-      // Nested loop over both short term and long term growth rates.
       for (let shortRate = minRate; shortRate <= maxRange + 1e-9; shortRate += step) {
         for (let longRate = minRate; longRate <= maxRange + 1e-9; longRate += step) {
           let intrinsicPrice = calculateIntrinsicSharePrice(fcf, shortRate, years, longRate, wacc, netDebt, costDebt, shares);
@@ -261,7 +283,6 @@
         }
       }
 
-      // Sort matching pairs by closeness and take the top 6.
       matchPairs.sort((a, b) => Math.abs(a.price - realPrice) - Math.abs(b.price - realPrice));
       let topMatches = matchPairs.slice(0, 6);
 
@@ -279,8 +300,6 @@
     }
 
     // Main calculation function.
-    // It computes the intrinsic share price, displays the result message,
-    // and then generates both the DCF analysis table and the sensitivity analysis table.
     function calculate() {
       let fcf = parseFloat(document.getElementById('fcf').value) * parseFloat(document.getElementById('fcfUnit').value);
       let shortGrowth = parseFloat(document.getElementById('shortGrowth').value) / 100;
@@ -305,7 +324,8 @@
         } else {
           message = "fairly valued";
         }
-        document.getElementById('result').innerHTML = "<p>Intrinsic Share Price: $" + intrinsicPrice.toFixed(2) + ";<br>Since the intrinsic price is " + (intrinsicPrice > realPrice ? "greater" : intrinsicPrice < realPrice ? "less" : "equal") +
+        document.getElementById('result').innerHTML = "<p>Intrinsic Share Price: $" + intrinsicPrice.toFixed(2) +
+          ";<br>Since the intrinsic price is " + (intrinsicPrice > realPrice ? "greater" : intrinsicPrice < realPrice ? "less" : "equal") +
           " than the real share price ($" + realPrice.toFixed(2) + "), the stock is " + message + ".</p>";
       }
 
@@ -315,6 +335,9 @@
   </script>
 </body>
 </html>
+
+
+
 
 
 
