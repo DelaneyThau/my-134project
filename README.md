@@ -1,2 +1,332 @@
 # my-134project
-Intrinsic Share Evaluation
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Is Your Stock Over or Undervalued?</title>
+  <style>
+    /* Overall slick, professional background */
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #34495e, #2c3e50);
+      margin: 0;
+      padding: 20px;
+    }
+    /* Container with gradient border */
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      border: 3px solid;
+      border-image: linear-gradient(45deg, #2980b9, #8e44ad) 1;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    h1, h2, h3 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    /* Compact input groups */
+    .input-group {
+      display: inline-block;
+      margin: 10px;
+      vertical-align: top;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    input[type="number"], select {
+      width: 150px;
+      padding: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    /* Buttons now match the dark blue background (#2c3e50) */
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #2c3e50;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #24303b;
+    }
+    .output {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #e9ecef;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 1.1em;
+      font-weight: bold;
+      color: #333;
+    }
+    /* Style for DCF table to ensure it fits within the container */
+    #dcfTable table {
+      width: 100%;
+      table-layout: fixed;
+    }
+    #dcfTable table th,
+    #dcfTable table td {
+      padding: 4px;
+      font-size: 0.8em;
+      word-wrap: break-word;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 0.9em;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Is your stock over or undervalued?</h1>
+    <p style="text-align:center;">
+      Calculate the intrinsic value of any stock!<br>
+      <small>Assuming the net debt of the company only changes by compounding with the cost of debt.</small>
+    </p>
+    
+    <h2>Your Company's Financial Entries</h2>
+    <div style="text-align:center;">
+      <div class="input-group">
+        <label for="fcf">Current Free Cash Flow:</label>
+        <input type="number" id="fcf" placeholder="Current FCF">
+        <select id="fcfUnit">
+          <option value="1e6">Millions</option>
+          <option value="1e9">Billions</option>
+          <option value="1e12">Trillions</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="shortGrowth">Short Term Growth Rate (%):</label>
+        <input type="number" id="shortGrowth" placeholder="Short Growth">
+      </div>
+      <div class="input-group">
+        <label for="years">Years (in the short term):</label>
+        <input type="number" id="years" placeholder="Years">
+      </div>
+      <div class="input-group">
+        <label for="longGrowth">Long Term Growth Rate (%):</label>
+        <input type="number" id="longGrowth" placeholder="Long Growth">
+      </div>
+      <div class="input-group">
+        <label for="wacc">WACC (%):</label>
+        <input type="number" id="wacc" placeholder="WACC">
+      </div>
+      <div class="input-group">
+        <label for="costDebt">Cost of Debt (%):</label>
+        <input type="number" id="costDebt" placeholder="Cost of Debt">
+      </div>
+      <div class="input-group">
+        <label for="netDebt">Current Net Debt:</label>
+        <input type="number" id="netDebt" placeholder="Current Net Debt">
+        <select id="netDebtUnit">
+          <option value="1e6">Millions</option>
+          <option value="1e9">Billions</option>
+          <option value="1e12">Trillions</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="shares">Outstanding Shares:</label>
+        <input type="number" id="shares" placeholder="Shares">
+        <select id="sharesUnit">
+          <option value="1">Units</option>
+          <option value="1e6">Millions</option>
+          <option value="1e9">Billions</option>
+          <option value="1e12">Trillions</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="realPrice">Real Share Price:</label>
+        <input type="number" id="realPrice" placeholder="Real Price">
+      </div>
+    </div>
+    
+    <div style="text-align:center;">
+      <button onclick="calculate()">Calculate Intrinsic Share Price, DCF & Sensitivity Analysis</button>
+    </div>
+    
+    <div class="output" id="result"></div>
+    
+    <!-- Toggle Button for Discounted Cash Flows Section -->
+    <div style="text-align:center;">
+      <button id="toggleDCF" onclick="toggleSection('dcfContent')">Discounted Cash Flows</button>
+    </div>
+    <div id="dcfContent" style="display: none;">
+      <div id="dcfTable"></div>
+    </div>
+    
+    <!-- Toggle Button for Sensitivity Analysis Section -->
+    <div style="text-align:center;">
+      <button id="toggleSensitivity" onclick="toggleSection('sensitivityContent')">Short Term and Long Term Growth Rates Variable Analysis</button>
+    </div>
+    <div id="sensitivityContent" style="display: none;">
+      <p style="text-align:center;">
+        This table gives six combinations of different short term and long term growth rates that make the intrinsic share price equal to the real share price of your stock. These six combinations have the lowest margin of error from the real share price.
+      </p>
+      <div id="matchTable"></div>
+    </div>
+  </div>
+  
+  <script>
+    // Toggle display of a section
+    function toggleSection(sectionId) {
+      var section = document.getElementById(sectionId);
+      if (section.style.display === "none" || section.style.display === "") {
+        section.style.display = "block";
+      } else {
+        section.style.display = "none";
+      }
+    }
+    
+    // Calculate the intrinsic share price using provided inputs.
+    // Net debt compounds each year using the cost of debt.
+    function calculateIntrinsicSharePrice(FCF, g_short, years, g_long, WACC, netDebt, costDebt, outstandingShares) {
+      let pv = 0;
+      for (let t = 1; t <= years; t++) {
+        let futureCF = FCF * Math.pow(1 + g_short, t);
+        pv += futureCF / Math.pow(1 + WACC, t);
+      }
+      let FCF_final = FCF * Math.pow(1 + g_short, years);
+      if (WACC <= g_long) {
+        return NaN;
+      }
+      let terminalValue = (FCF_final * (1 + g_long)) / (WACC - g_long) / Math.pow(1 + WACC, years);
+      // Compound net debt using cost of debt for the given number of years.
+      let compoundedNetDebt = netDebt * Math.pow(1 + costDebt, years);
+      let enterpriseValue = pv + terminalValue;
+      let equityValue = enterpriseValue - compoundedNetDebt;
+      return equityValue / outstandingShares;
+    }
+    
+    // Generate the Discounted Cash Flows table.
+    // The table creates columns based on the "Years" input, a column for Terminal Value,
+    // and a final column for the sum of all discounted cash flows (Present Value of Cash Flows).
+    // Values are displayed in billions (rounded to 3 decimals).
+    function generateDCFTable() {
+      let fcf = parseFloat(document.getElementById('fcf').value) * parseFloat(document.getElementById('fcfUnit').value);
+      let shortGrowth = parseFloat(document.getElementById('shortGrowth').value) / 100;
+      let WACC = parseFloat(document.getElementById('wacc').value) / 100;
+      let longGrowth = parseFloat(document.getElementById('longGrowth').value) / 100;
+      let numYears = parseInt(document.getElementById('years').value);
+      
+      let totalDCF = 0;
+      let tableHTML = "<table><tr>";
+      for (let year = 1; year <= numYears; year++) {
+        tableHTML += "<th>Year " + year + "</th>";
+      }
+      tableHTML += "<th>Terminal Value</th><th>Present Value of Cash Flows</th></tr>";
+      
+      tableHTML += "<tr>";
+      for (let year = 1; year <= numYears; year++) {
+        let futureCF = fcf * Math.pow(1 + shortGrowth, year);
+        let discountedCF = futureCF / Math.pow(1 + WACC, year);
+        totalDCF += discountedCF;
+        tableHTML += "<td>$" + (discountedCF / 1e9).toFixed(3) + "B</td>";
+      }
+      let FCF_final = fcf * Math.pow(1 + shortGrowth, numYears);
+      let terminalValue = (FCF_final * (1 + longGrowth)) / (WACC - longGrowth) / Math.pow(1 + WACC, numYears);
+      totalDCF += terminalValue;
+      tableHTML += "<td>$" + (terminalValue / 1e9).toFixed(3) + "B</td>";
+      tableHTML += "<td>$" + (totalDCF / 1e9).toFixed(3) + "B</td>";
+      tableHTML += "</tr></table>";
+      
+      document.getElementById('dcfTable').innerHTML = tableHTML;
+    }
+    
+    // Generate the Sensitivity Analysis table showing the top 6 matching growth rate combinations.
+    function generateSensitivityAnalysis() {
+      let minRate = 0;
+      let maxLimit = 0.5; // up to 50%
+      let wacc = parseFloat(document.getElementById('wacc').value) / 100;
+      let maxRange = (wacc < maxLimit ? wacc : maxLimit);
+      let step = 0.001; // 0.1% increments
+      
+      let fcf = parseFloat(document.getElementById('fcf').value) * parseFloat(document.getElementById('fcfUnit').value);
+      let years = parseInt(document.getElementById('years').value);
+      let netDebt = parseFloat(document.getElementById('netDebt').value) * parseFloat(document.getElementById('netDebtUnit').value);
+      let shares = parseFloat(document.getElementById('shares').value) * parseFloat(document.getElementById('sharesUnit').value);
+      let realPrice = parseFloat(document.getElementById('realPrice').value);
+      let costDebt = parseFloat(document.getElementById('costDebt').value) / 100;
+      
+      let matchPairs = [];
+      let absTol = 0.20; // ±$0.20 tolerance
+      
+      for (let shortRate = minRate; shortRate <= maxRange + 1e-9; shortRate += step) {
+        for (let longRate = minRate; longRate <= maxRange + 1e-9; longRate += step) {
+          let intrinsicPrice = calculateIntrinsicSharePrice(fcf, shortRate, years, longRate, wacc, netDebt, costDebt, shares);
+          if (!isNaN(intrinsicPrice) && Math.abs(intrinsicPrice - realPrice) <= absTol) {
+            matchPairs.push({ short: shortRate, long: longRate, price: intrinsicPrice });
+          }
+        }
+      }
+      
+      matchPairs.sort((a, b) => Math.abs(a.price - realPrice) - Math.abs(b.price - realPrice));
+      let topMatches = matchPairs.slice(0, 6);
+      
+      let tableHTML = "<table><tr><th>Short Term Growth Rate (%)</th><th>Long Term Growth Rate (%)</th><th>Intrinsic Price ($)</th><th>Difference ($)</th></tr>";
+      if (topMatches.length === 0) {
+        tableHTML += "<tr><td colspan='4'>No matching combinations within ±$0.20 found.</td></tr>";
+      } else {
+        topMatches.forEach(function(pair) {
+          let diff = Math.abs(pair.price - realPrice);
+          tableHTML += "<tr><td>" + (pair.short * 100).toFixed(2) + "%</td><td>" + (pair.long * 100).toFixed(2) + "%</td><td>$" + pair.price.toFixed(2) + "</td><td>$" + diff.toFixed(2) + "</td></tr>";
+        });
+      }
+      tableHTML += "</table>";
+      document.getElementById('matchTable').innerHTML = tableHTML;
+    }
+    
+    // Main calculation function.
+    function calculate() {
+      let fcf = parseFloat(document.getElementById('fcf').value) * parseFloat(document.getElementById('fcfUnit').value);
+      let shortGrowth = parseFloat(document.getElementById('shortGrowth').value) / 100;
+      let years = parseInt(document.getElementById('years').value);
+      let longGrowth = parseFloat(document.getElementById('longGrowth').value) / 100;
+      let wacc = parseFloat(document.getElementById('wacc').value) / 100;
+      let netDebt = parseFloat(document.getElementById('netDebt').value) * parseFloat(document.getElementById('netDebtUnit').value);
+      let shares = parseFloat(document.getElementById('shares').value) * parseFloat(document.getElementById('sharesUnit').value);
+      let realPrice = parseFloat(document.getElementById('realPrice').value);
+      let costDebt = parseFloat(document.getElementById('costDebt').value) / 100;
+      
+      let intrinsicPrice = calculateIntrinsicSharePrice(fcf, shortGrowth, years, longGrowth, wacc, netDebt, costDebt, shares);
+      
+      if (isNaN(intrinsicPrice)) {
+        document.getElementById('result').innerHTML = "<p style='color:red;'>Error: WACC must be greater than the Long Term Growth Rate.</p>";
+      } else {
+        let message = "";
+        if (intrinsicPrice > realPrice) {
+          message = "undervalued";
+        } else if (intrinsicPrice < realPrice) {
+          message = "overvalued";
+        } else {
+          message = "fairly valued";
+        }
+        document.getElementById('result').innerHTML = "<p>Intrinsic Share Price: $" + intrinsicPrice.toFixed(2) +
+          ";<br>Since the intrinsic price is " + (intrinsicPrice > realPrice ? "greater" : intrinsicPrice < realPrice ? "less" : "equal") +
+          " than the real share price ($" + realPrice.toFixed(2) + "), the stock is " + message + ".</p>";
+      }
+      
+      generateDCFTable();
+      generateSensitivityAnalysis();
+    }
+  </script>
+</body>
+</html>
+
